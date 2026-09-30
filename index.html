@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 Smart Workspace - NEXUS OS</title>
+    <!-- FontAwesome ժամանակակից իկոնաներ -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            /* Գույներ և դիզայնի փոփոխականներ */
+            --bg-gradient: radial-gradient(circle at 50% 0%, #171131 0%, #0b1120 50%, #040812 100%);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-hover: rgba(255, 255, 255, 0.06);
+            --glass-card: rgba(10, 15, 30, 0.55);
+            --text-main: #f8fafc;
+            --text-muted: #64748b;
+            --accent-primary: #a855f7;
+            --accent-cyan: #06b6d4;
+            --accent-glow: rgba(168, 85, 247, 0.4);
+            --cyan-glow: rgba(6, 182, 212, 0.4);
+            --radius-lg: 28px;
+            --radius-md: 18px;
+            --transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .light-mode {
+            --bg-gradient: radial-gradient(circle at 50% 0%, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%);
+            --glass-bg: rgba(255, 255, 255, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.8);
+            --glass-hover: rgba(255, 255, 255, 0.8);
+            --glass-card: rgba(255, 255, 255, 0.6);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --accent-glow: rgba(168, 85, 247, 0.2);
+            --cyan-glow: rgba(6, 182, 212, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2vw;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            overflow-x: hidden;
+            transition: background 0.8s ease;
+        }
+
+        /* BOOT SCREEN */
+        #bootScreen {
+            position: fixed; inset: 0; background: #030712; z-index: 10000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; transition: opacity 0.8s ease, visibility 0.8s;
+        }
+        #bootScreen.hidden { opacity: 0; visibility: hidden; }
+        .boot-ring {
+            width: 120px; height: 120px; border: 3px solid rgba(6, 182, 212, 0.1);
+            border-top: 3px solid #06b6d4; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 30px;
+            box-shadow: 0 0 30px var(--cyan-glow);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .boot-ring i { animation: counterSpin 1s linear infinite; font-size: 2.5rem; color: #a855f7; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes counterSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+        .boot-text { font-size: 1.5rem; font-weight: 800; letter-spacing: 6px; background: linear-gradient(90deg, #a855f7, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* DASHBOARD STYLES */
+        .ambient-glow {
+            position: fixed; top: -10%; left: 0%; width: 700px; height: 700px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 60%);
+            filter: blur(120px); z-index: -1; animation: float 12s infinite alternate ease-in-out;
+        }
+        .ambient-glow-2 {
+            position: fixed; bottom: -20%; right: 0%; width: 800px; height: 800px;
+            background: radial-gradient(circle, var(--cyan-glow) 0%, rgba(0,0,0,0) 60%);
+            filter: blur(140px); z-index: -1; animation: float 16s infinite alternate-reverse ease-in-out;
+        }
+        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, 30px); } }
+
+        /* Glass Cards */
+        .glass-panel {
+            background: var(--glass-card); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 28px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            transition: var(--transition); position: relative;
+        }
+        .glass-panel:hover {
+            border-color: rgba(255, 255, 255, 0.15); transform: translateY(-5px);
+            box-shadow: 0 30px 50px rgba(0, 0, 0, 0.4), 0 0 30px rgba(168, 85, 247, 0.15);
+        }
+
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; }
+        .logo { display: flex; align-items: center; gap: 16px; font-size: 1.4rem; font-weight: 800; }
+        .logo-icon { 
+            width: 46px; height: 46px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
+            border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white;
+            box-shadow: 0 10px 25px var(--accent-glow); transition: var(--transition);
+        }
+        .controls { display: flex; align-items: center; gap: 20px; }
+        .icon-btn { 
+            background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-main);
+            width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: var(--transition); font-size: 1.1rem;
+        }
+        .icon-btn:hover { 
+            background: rgba(255,255,255,0.1); transform: scale(1.1) rotate(8deg); 
+            border-color: var(--accent-cyan); color: var(--accent-cyan); box-shadow: 0 0 20px var(--cyan-glow);
+        }
+
+        /* Grid */
+        .bento-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
+        .col-4 { grid-column: span 4; } .col-8 { grid-column: span 8; } .col-6 { grid-column: span 6; }
+        @media (max-width: 1024px) { .col-4, .col-8, .col-6 { grid-column: span 12; } }
+
+        /* Widget Headers */
+        .widget-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+        .widget-title i {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-size: 1.3rem; margin-right: 8px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+        }
+
+        /* Clock Widget */
+        .clock-widget { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .clock-time { font-size: 4.2rem; font-weight: 900; letter-spacing: -2px; background: linear-gradient(180deg, #fff 20%, #64748b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5)); }
+        .clock-date { font-size: 1.1rem; color: var(--accent-cyan); margin-top: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Focus Audio */
+        .sound-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 15px; }
+        .sound-btn { 
+            background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 20px 10px;
+            border-radius: var(--radius-md); color: var(--text-muted); display: flex; flex-direction: column; 
+            align-items: center; gap: 12px; cursor: pointer; transition: var(--transition); font-weight: 600; font-size: 0.85rem;
+        }
+        .sound-btn i { font-size: 1.8rem; transition: var(--transition); color: var(--text-main); opacity: 0.8; }
+        .sound-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); transform: translateY(-4px); color: var(--text-main); }
+        .sound-btn:hover i { transform: scale(1.1); opacity: 1; color: var(--accent-cyan); }
+        .sound-btn.active { 
+            background: linear-gradient(145deg, rgba(168, 85, 247, 0.2), rgba(6, 182, 212, 0.2)); border-color: var(--accent-cyan); color: #fff;
+            box-shadow: 0 10px 25px var(--cyan-glow), inset 0 0 15px rgba(6, 182, 212, 0.2); 
+        }
+        .sound-btn.active i { 
+            background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            transform: scale(1.2); filter: drop-shadow(0 0 8px rgba(255,255,255,0.5));
+        }
+
+        /* Task Manager */
+        .task-input-container { display: flex; gap: 14px; margin-bottom: 20px; }
+        .task-input { 
+            flex: 1; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); 
+            border-radius: var(--radius-md); padding: 16px 20px; color: var(--text-main); outline: none; transition: var(--transition); font-size: 1rem;
+        }
+        .task-input:focus { border-color: var(--accent-primary); box-shadow: 0 0 20px var(--accent-glow); background: rgba(255,255,255,0.05); }
+        .btn-add { 
+            background: linear-gradient(135deg, var(--accent-primary), #06b6d4); border: none; color: white; 
+            padding: 0 26px; border-radius: var(--radius-md); cursor: pointer; transition: var(--transition); font-size: 1.2rem;
+        }
+        .btn-add:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 10px 25px var(--cyan-glow); }
+        
+        .task-list { list-style: none; display: flex; flex-direction: column; gap: 14px; max-height: 230px; overflow-y: auto; padding-right: 8px; }
+        .task-item { 
+            background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 16px 20px; 
+            border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; transition: var(--transition);
+        }
+        .task-item:hover { background: rgba(255,255,255,0.08); transform: translateX(6px); border-color: var(--accent-cyan); }
+        .task-item.completed span { text-decoration: line-through; color: var(--text-muted); font-style: italic; }
+        .task-actions { display: flex; gap: 14px; }
+        .task-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; transition: var(--transition); }
+        .task-btn:hover { color: var(--accent-green); transform: scale(1.2); }
+        .task-btn.delete:hover { color: #f43f5e; }
+
+        /* AI Chat & Notes (նույնը) */
+        .ai-chat-box { display: flex; flex-direction: column; height: 270px; }
+        .ai-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 10px; margin-bottom: 16px; }
+        .msg { max-width: 85%; padding: 14px 18px; border-radius: 20px; font-size: 0.95rem; line-height: 1.5; box-shadow: 0 5px 15px rgba(0,0,0,0.15); }
+        .msg.ai { background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg.user { background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .notes-area { 
+            width: 100%; height: 180px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); 
+            border-radius: var(--radius-md); padding: 20px; color: var(--text-main); resize: none; outline: none; font-size: 1rem; transition: var(--transition);
+        }
+        .notes-area:focus { border-color: var(--accent-cyan); background: rgba(255,255,255,0.05); box-shadow: 0 0 20px var(--cyan-glow); }
+        
+        .status-pill { 
+            font-size: 0.85rem; padding: 8px 18px; border-radius: 30px; background: rgba(16, 185, 129, 0.1); 
+            color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 700; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); 
+        }
+        footer { text-align: center; font-size: 0.9rem; color: var(--text-muted); margin-top: 10px; padding: 15px; letter-spacing: 1px; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+    </style>
+</head>
+<body>
+
+    <!-- ՀԱՔԵՐԱՅԻՆ ՄԻԱՑՄԱՆ ԷԿՐԱՆ -->
+    <div id="bootScreen">
+        <div class="boot-ring"><i class="fa-solid fa-microchip"></i></div>
+        <div class="boot-text">NEXUS SYSTEM</div>
+        <div style="font-size: 0.8rem; color: #06b6d4; margin-top: 15px; letter-spacing: 2px;">ԲԵՌՆՎՈՒՄ ԵՆ ՏՎՅԱԼՆԵՐԸ...</div>
+    </div>
+
+    <!-- ԳԼԽԱՎՈՐ ՄԻՋԱՎԱՅՐ -->
+    <div class="ambient-glow"></div>
+    <div class="ambient-glow-2"></div>
+
+    <header class="glass-panel" style="padding: 15px 30px; border-radius: 20px; margin-bottom: 5px;">
+        <div class="logo">
+            <div class="logo-icon"><i class="fa-solid fa-bolt"></i></div>
+            <span style="background: linear-gradient(90deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                NEXUS <span style="font-weight: 300;">OS</span>
+            </span>
+        </div>
+        <div class="controls">
+            <span class="status-pill"><i class="fa-solid fa-signal"></i> System Online</span>
+            <button class="icon-btn" id="themeToggle" title="Փոխել Դիզայնը"><i class="fa-solid fa-moon"></i></button>
+        </div>
+    </header>
+
+    <div class="bento-grid">
+        <!-- Ժամացույց -->
+        <div class="glass-panel col-4 clock-widget">
+            <div class="clock-time" id="timeDisplay">00:00:00</div>
+            <div class="clock-date" id="dateDisplay">--</div>
+        </div>
+
+        <!-- Գրաֆիկ Իրական Ժամանակում -->
+        <div class="glass-panel col-8">
+            <div class="widget-title">
+                <span><i class="fa-solid fa-chart-simple"></i> Իմ Արտադրողականությունը</span>
+            </div>
+            <div style="height: 170px; position: relative;">
+                <canvas id="analyticsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Ֆոկուսի Ձայներ -->
+        <div class="glass-panel col-4">
+            <div class="widget-title"><span><i class="fa-solid fa-headphones-simple"></i> Ֆոկուս Աուդիո</span></div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">Ընտրեք ֆոնային ալիքը․</p>
+            <div class="sound-modes">
+                <button class="sound-btn" onclick="toggleSound('cosmic', this)"><i class="fa-solid fa-meteor"></i><span>Տիեզերք</span></button>
+                <button class="sound-btn" onclick="toggleSound('rain', this)"><i class="fa-solid fa-cloud-rain"></i><span>Անձրև</span></button>
+                <button class="sound-btn" onclick="toggleSound('waves', this)"><i class="fa-solid fa-wave-square"></i><span>Ալիքներ</span></button>
+            </div>
+        </div>
+
+        <!-- Առաջադրանքներ -->
+        <div class="glass-panel col-8">
+            <div class="widget-title">
+                <span><i class="fa-solid fa-layer-group"></i> Առաջադրանքներ</span>
+                <span id="taskCount" style="font-size: 0.9rem; color: var(--accent-cyan); font-weight: 600;">0 Կատարված</span>
+            </div>
+            <div class="task-input-container">
+                <input type="text" id="taskInput" class="task-input" placeholder="Ի՞նչ ունենք անելու այսօր..." onkeypress="handleTaskKey(event)">
+                <button class="btn-add" onclick="addTask()"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+            <ul class="task-list" id="taskList"></ul>
+        </div>
+
+        <!-- AI Չատ -->
+        <div class="glass-panel col-6">
+            <div class="widget-title"><span><i class="fa-solid fa-brain"></i> AI Ասիստենտ</span></div>
+            <div class="ai-chat-box">
+                <div class="ai-messages" id="aiMessages">
+                    <div class="msg ai">Ողջույն։ Ես քո խելացի օգնականն եմ։ Պատրա՞ստ ես աշխատել։</div>
+                </div>
+                <div class="task-input-container" style="margin-bottom: 0; margin-top: 10px;">
+                    <input type="text" id="aiInput" class="task-input" placeholder="Հարցրու ինձ որևէ բան..." onkeypress="handleAIKey(event)">
+                    <button class="btn-add" onclick="sendAIMessage()"><i class="fa-solid fa-message"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Նոթատետր -->
+        <div class="glass-panel col-6">
+            <div class="widget-title">
+                <span><i class="fa-solid fa-pen-to-square"></i> Արագ Նշումներ</span>
+                <span style="font-size: 0.8rem; color: #10b981;" id="saveStatus"><i class="fa-solid fa-check"></i> Պահպանված է</span>
+            </div>
+            <textarea class="notes-area" id="notesArea" placeholder="Այստեղ կարող ես գրել քո մտքերը..."></textarea>
+        </div>
+    </div>
+
+    <footer>2026 © NEXUS OS | Smart Dashboard Interface</footer>
+
+    <script>
+        // ՄԻԱՑՄԱՆ ԷԿՐԱՆ
+        window.addEventListener('load', () => { setTimeout(() => { document.getElementById('bootScreen').classList.add('hidden'); }, 2000); });
+
+        // ԺԱՄԱՑՈՒՅՑ
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('timeDisplay').textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            document.getElementById('dateDisplay').textContent = now.toLocaleDateString('hy-AM', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        // ԹԵՄԱ
+        const themeBtn = document.getElementById('themeToggle');
+        let isLight = localStorage.getItem('nexus_theme') === 'light';
+        if (isLight) { document.body.classList.add('light-mode'); themeBtn.innerHTML = '<i class="fa-solid fa-sun"></i>'; }
+        themeBtn.addEventListener('click', () => {
+            isLight = !isLight; document.body.classList.toggle('light-mode');
+            themeBtn.innerHTML = isLight ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+            localStorage.setItem('nexus_theme', isLight ? 'light' : 'dark');
+        });
+
+        // ԻՐԱԿԱՆ ԺԱՄԱՆԱԿՈՒՄ ԳՐԱՖԻԿԻ ՏՎՅԱԼՆԵՐ
+        let dailyStats = JSON.parse(localStorage.getItem('nexus_stats')) || [0, 0, 0, 0, 0, 0, 0];
+        let chartInstance = null;
+
+        function getTodayIndex() {
+            // Javascript-ում կիրակին 0 է, երկուշաբթին 1։ Մենք դարձնում ենք Երկուշաբթին 0, Կիրակին 6։
+            let day = new Date().getDay();
+            return (day + 6) % 7; 
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('analyticsChart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 160);
+            gradient.addColorStop(0, 'rgba(6, 182, 212, 0.6)'); gradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
+            
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { 
+                    labels: ['Երկ', 'Երք', 'Չոր', 'Հնգ', 'Ուրբ', 'Շբթ', 'Կիր'], 
+                    datasets: [{ 
+                        data: dailyStats, 
+                        borderColor: '#06b6d4', borderWidth: 4, fill: true, backgroundColor: gradient, 
+                        tension: 0.5, pointBackgroundColor: '#a855f7', pointBorderColor: '#fff', pointRadius: 6 
+                    }] 
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } } } 
+                }
+            });
+        }
+        initChart();
+
+        function updateChart() {
+            localStorage.setItem('nexus_stats', JSON.stringify(dailyStats));
+            chartInstance.data.datasets[0].data = dailyStats;
+            chartInstance.update();
+        }
+
+        // ԱՌԱՋԱԴՐԱՆՔՆԵՐ (ԹԱՐՄԱՑՎԱԾ ԳՐԱՖԻԿՈՎ)
+        let tasks = JSON.parse(localStorage.getItem('nexus_tasks')) || [];
+        function saveTasks() { localStorage.setItem('nexus_tasks', JSON.stringify(tasks)); }
+
+        function renderTasks() {
+            const list = document.getElementById('taskList'); list.innerHTML = '';
+            let compCount = 0;
+            tasks.forEach(task => {
+                if (task.completed) compCount++;
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                li.innerHTML = `<span>${task.text}</span><div class="task-actions"><button class="task-btn" onclick="toggleTask(${task.id})"><i class="fa-solid ${task.completed ? 'fa-circle-check' : 'fa-circle'}"></i></button><button class="task-btn delete" onclick="deleteTask(${task.id})"><i class="fa-solid fa-trash"></i></button></div>`;
+                list.appendChild(li);
+            });
+            document.getElementById('taskCount').textContent = `${compCount}/${tasks.length} Կատարված`;
+        }
+
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            if (input.value.trim()) { 
+                tasks.push({ id: Date.now(), text: input.value.trim(), completed: false }); 
+                saveTasks(); input.value = ''; renderTasks(); 
+            }
+        }
+        function handleTaskKey(e) { if (e.key === 'Enter') addTask(); }
+
+        function toggleTask(id) { 
+            let taskIndex = tasks.findIndex(t => t.id === id);
+            if(taskIndex > -1) {
+                let todayIndex = getTodayIndex();
+                if (!tasks[taskIndex].completed) {
+                    tasks[taskIndex].completed = true;
+                    dailyStats[todayIndex]++; // Գրաֆիկը բարձրանում է
+                } else {
+                    tasks[taskIndex].completed = false;
+                    if(dailyStats[todayIndex] > 0) dailyStats[todayIndex]--; // Գրաֆիկը իջնում է
+                }
+                saveTasks(); renderTasks(); updateChart();
+            }
+        }
+
+        function deleteTask(id) { 
+            let task = tasks.find(t => t.id === id);
+            if(task && task.completed) {
+                let todayIndex = getTodayIndex();
+                if(dailyStats[todayIndex] > 0) dailyStats[todayIndex]--; // Ջնջելիս գրաֆիկն իջնում է, եթե կատարված էր
+            }
+            tasks = tasks.filter(t => t.id !== id); 
+            saveTasks(); renderTasks(); updateChart();
+        }
+        renderTasks();
+
+        // ՆՈԹԱՏԵՏՐ
+        const notesArea = document.getElementById('notesArea'), saveStatus = document.getElementById('saveStatus');
+        notesArea.value = localStorage.getItem('nexus_notes') || '';
+        notesArea.addEventListener('input', () => {
+            saveStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Պահպանվում է...';
+            localStorage.setItem('nexus_notes', notesArea.value);
+            setTimeout(() => { saveStatus.innerHTML = '<i class="fa-solid fa-check"></i> Պահպանված է'; }, 800);
+        });
+
+        // AI ՉԱՏ
+        function sendAIMessage() {
+            const input = document.getElementById('aiInput'); const text = input.value.trim();
+            if (!text) return;
+            const chat = document.getElementById('aiMessages');
+            chat.innerHTML += `<div class="msg user">${text}</div>`;
+            input.value = ''; chat.scrollTop = chat.scrollHeight;
+
+            setTimeout(() => {
+                let reply = "Հասկացա։ Ի՞նչ այլ հարցով կարող եմ օգնել։";
+                if (text.toLowerCase().includes('բարև')) reply = "Ողջույն! Պատրաստ եմ նոր առաջադրանքների։";
+                chat.innerHTML += `<div class="msg ai">${reply}</div>`;
+                chat.scrollTop = chat.scrollHeight;
+            }, 800);
+        }
+        function handleAIKey(e) { if (e.key === 'Enter') sendAIMessage(); }
+
+        // ԱՈՒԴԻՈ
+        let audioCtx = null; let activeOscillator = null; let activeSoundType = null;
+        function toggleSound(type, btnElement) {
+            const buttons = document.querySelectorAll('.sound-btn');
+            if (activeSoundType === type) { stopSound(); buttons.forEach(btn => btn.classList.remove('active')); activeSoundType = null; return; }
+            buttons.forEach(btn => btn.classList.remove('active')); if (btnElement) btnElement.classList.add('active');
+            stopSound(); startSound(type); activeSoundType = type;
+        }
+        function startSound(type) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            if (type === 'cosmic') { osc.type = 'sine'; osc.frequency.setValueAtTime(108, audioCtx.currentTime); gain.gain.setValueAtTime(0.08, audioCtx.currentTime); }
+            else if (type === 'rain') { osc.type = 'triangle'; osc.frequency.setValueAtTime(180, audioCtx.currentTime); gain.gain.setValueAtTime(0.04, audioCtx.currentTime); }
+            else if (type === 'waves') { osc.type = 'sine'; osc.frequency.setValueAtTime(60, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); }
+            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); activeOscillator = osc;
+        }
+        function stopSound() { if (activeOscillator) { try { activeOscillator.stop(); } catch(e) {} activeOscillator = null; } }
+    </script>
+</body>
+</html>
